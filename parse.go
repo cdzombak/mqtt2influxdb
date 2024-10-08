@@ -33,7 +33,7 @@ func MsgParse(msg map[string]any) (ParseResult, error) {
 	var errs error
 	for k, v := range msg {
 		if k == "at" || k == "ts" || k == "time" {
-			// TODO(cdzombak): support for other formats
+			// support for other formats tracked at: https://github.com/cdzombak/mqtt2influxdb/issues/3
 			if s, ok := v.(string); ok {
 				result, err := time.Parse(time.RFC3339, s)
 				if err != nil {

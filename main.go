@@ -169,7 +169,8 @@ func main() {
 		clientID := fmt.Sprintf("%s-%s", hostname, RandAlnumString(8))
 		log.Printf("generated client ID: %s", clientID)
 	}
-	// TODO(cdzombak): else { check for client id conflict }
+	// check for client ID conflicts with other instances on this network
+	// ( tracked at https://github.com/cdzombak/mqtt2influxdb/issues/4 )
 
 	if cfg.Mqtt.Topic == "" {
 		log.Fatalf("MQTT_TOPIC must be set")
@@ -304,7 +305,7 @@ func Main(ctx context.Context, cfg Config) error {
 
 	influxWriter := newInfluxWriter(ctx, cfg.Influx)
 
-	// TODO(cdzombak): implement heartbeat
+	// heartbeat tracked at: https://github.com/cdzombak/mqtt2influxdb/issues/2
 	if cfg.Heartbeat.GetURL != "" || cfg.Heartbeat.HealthPort != 0 {
 		log.Fatalf("heartbeat is not yet implemented")
 	}

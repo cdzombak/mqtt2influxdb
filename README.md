@@ -2,7 +2,8 @@
 
 An opinionated and intentionally scope-limited MQTT to InfluxDB bridge.
 
-TODO(cdzombak): finish readme
+> [!NOTE]  
+> This README is incomplete (tracked in [#1](https://github.com/cdzombak/mqtt2influxdb/issues/1)).
 
 ## Goals & Features
 
@@ -129,7 +130,7 @@ If a message contains a timestamp field, it must be a string and will be parsed 
 > [!NOTE]  
 > Timestamps from an Apple platform formatted as `NSISO8601DateFormatWithInternetDateTime` **will** be parsed correctly by this program.
 
-In the future, multiple timestamp formats may be supported; see #TK.
+In the future, multiple timestamp formats may be supported; see [#3](https://github.com/cdzombak/mqtt2influxdb/issues/3).
 
 ### Multiple .env files
 
