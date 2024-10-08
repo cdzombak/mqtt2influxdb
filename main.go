@@ -397,8 +397,6 @@ func handleMessage(ctx context.Context, cfg Config, influxWriter api.WriteAPIBlo
 		})
 		if !IsPartialFailure(err) {
 			return
-		} else {
-			err = nil
 		}
 	}
 

@@ -12,7 +12,13 @@ import (
 
 type StrictLogger func(m string)
 
-const strictLoggerCtxKey = "com.dzombak.mqtt2influxdb.ctx.strictLogger"
+type contextKey string
+
+func (c contextKey) String() string {
+	return string(c)
+}
+
+const strictLoggerCtxKey = contextKey("com.dzombak.mqtt2influxdb.ctx.strictLogger")
 
 func NewStrictLogger(strict bool) StrictLogger {
 	if strict {
