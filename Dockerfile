@@ -1,7 +1,7 @@
 ARG BIN_NAME=mqtt2influxdb
 ARG BIN_VERSION=<unknown>
 
-FROM golang:1-alpine AS builder
+FROM golang:1 AS builder
 ARG BIN_NAME
 ARG BIN_VERSION
 RUN update-ca-certificates
