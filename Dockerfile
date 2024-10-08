@@ -11,6 +11,7 @@ RUN CGO_ENABLED=0 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${
 
 FROM scratch
 ARG BIN_NAME
+ARG BIN_VERSION
 COPY --from=builder /src/${BIN_NAME}/out/${BIN_NAME} /usr/bin/${BIN_NAME}
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/usr/bin/${BIN_NAME}"]
