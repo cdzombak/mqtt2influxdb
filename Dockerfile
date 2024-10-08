@@ -14,7 +14,7 @@ ARG BIN_NAME
 ARG BIN_VERSION
 COPY --from=builder /src/${BIN_NAME}/out/${BIN_NAME} /usr/bin/${BIN_NAME}
 COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
-ENTRYPOINT ["/usr/bin/${BIN_NAME}"]
+ENTRYPOINT ["/usr/bin/mqtt2influxdb"]
 
 LABEL license="LGPL3"
 LABEL maintainer="Chris Dzombak <https://www.dzombak.com>"
