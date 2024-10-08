@@ -1,0 +1,6 @@
+-s dir
+--name mqtt2influxdb
+--description "An opinionated and intentionally scope-limited MQTT to InfluxDB bridge"
+--url "https://github.com/cdzombak/mqtt2influxdb"
+--maintainer "Chris Dzombak <https://www.dzombak.com>"
+--license LGPL-3.0
