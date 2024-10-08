@@ -10,7 +10,7 @@ help: ## Print help
 	@grep -E '^[a-zA-Z_-/]+:.*?## .*$$' $(MAKEFILE_LIST) | sort | awk 'BEGIN {FS = ":.*?## "}; {printf "\033[36m%-30s\033[0m %s\n", $$1, $$2}'
 
 .PHONY: all
-all: clean build-linux-amd64 build-linux-arm64 build-linux-armv7 build-linux-armv6 build-darwin-amd64 build-darwin-arm64 ## Build for macOS (amd64, arm64) and Linux (amd64, arm64, armv7, armv6)
+all: clean build-linux-amd64 build-linux-arm64 build-linux-386 build-linux-armv7 build-linux-armv6 build-darwin-amd64 build-darwin-arm64 ## Build for macOS (amd64, arm64) and Linux (amd64, 386, arm64, armv7, armv6)
 
 .PHONY: clean
 clean: ## Remove build products (./out)
@@ -28,6 +28,10 @@ build-linux-amd64: ## Build for Linux/amd64 to ./out
 .PHONY: build-linux-arm64
 build-linux-arm64: ## Build for Linux/arm64 to ./out
 	env CGO_ENABLED=0 GOOS=linux GOARCH=arm64 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${BIN_NAME}-${BIN_VERSION}-linux-arm64 .
+
+.PHONY: build-linux-386
+build-linux-386: ## Build for Linux/386 to ./out
+	env CGO_ENABLED=0 GOOS=linux GOARCH=386 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${BIN_NAME}-${BIN_VERSION}-linux-386 .
 
 .PHONY: build-linux-armv7
 build-linux-armv7: ## Build for Linux/armv7 to ./out
