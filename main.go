@@ -150,6 +150,7 @@ func main() {
 	SetStrictEnvPolicies(*strict)
 
 	cfg := Config{
+		Mode: MsgModeJSON,
 		Mqtt: &MqttConfig{
 			Topic:            os.Getenv("MQTT_TOPIC"),
 			User:             os.Getenv("MQTT_USER"),
