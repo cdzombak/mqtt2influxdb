@@ -24,6 +24,13 @@ import (
 	"github.com/joho/godotenv"
 )
 
+type MsgMode int
+
+const (
+	MsgModeJSON MsgMode = iota
+	MsgModeSingle
+)
+
 type MqttConfig struct {
 	Server               *url.URL
 	Topic                string
@@ -55,6 +62,7 @@ type HeartbeatConfig struct {
 }
 
 type Config struct {
+	Mode      MsgMode
 	Mqtt      *MqttConfig
 	Influx    *InfluxConfig
 	Heartbeat *HeartbeatConfig
@@ -103,11 +111,13 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  INFLUX_RETRIES")
 	fmt.Fprintln(os.Stderr, "  INFLUX_TAGS")
 	fmt.Fprintln(os.Stderr, "  --")
+	fmt.Fprintln(os.Stderr, "  M2I_MODE=<json|single>")
 	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-name>_ISA=<field|tag>")
-	fmt.Fprintln(os.Stderr, "  FIELDTAG_DETERMINATION_FAILURE=<ignore|log|fatal>")
-	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name>_TYPE=<int|float|double|string|bool>")
-	fmt.Fprintln(os.Stderr, "  CAST_FAILURE=<ignore|log|fatal>")
+	fmt.Fprintln(os.Stderr, "  M2I_SINGLE_FIELDNAME")
+	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name|SINGLE>_TYPE=<int|float|double|string|bool>")
 	fmt.Fprintln(os.Stderr, "  DEFAULT_NUMBERS_TO_FLOAT=<true|false>")
+	fmt.Fprintln(os.Stderr, "  FIELDTAG_DETERMINATION_FAILURE=<ignore|log|fatal>")
+	fmt.Fprintln(os.Stderr, "  CAST_FAILURE=<ignore|log|fatal>")
 	fmt.Fprintln(os.Stderr, "  --")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_GET_URL")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_INTERVAL_S")
@@ -159,6 +169,20 @@ func main() {
 		Heartbeat: &HeartbeatConfig{
 			GetURL: os.Getenv("HEARTBEAT_GET_URL"),
 		},
+	}
+
+	if os.Getenv("M2I_MODE") != "" {
+		mode := strings.ToLower(os.Getenv("M2I_MODE"))
+		if mode == "json" {
+			cfg.Mode = MsgModeJSON
+		} else if mode == "single" {
+			cfg.Mode = MsgModeSingle
+		} else {
+			log.Fatalf("invalid M2I_MODE '%s'; must be 'json' or 'single'", mode)
+		}
+	}
+	if cfg.Mode == MsgModeSingle && os.Getenv("M2I_SINGLE_FIELDNAME") == "" {
+		log.Fatalf("M2I_SINGLE_FIELDNAME must be set when M2I_MODE=single")
 	}
 
 	if cfg.Mqtt.ClientID == "" {
@@ -321,12 +345,19 @@ func Main(ctx context.Context, cfg Config) error {
 					strictLog(fmt.Sprintf("received message on unexpected topic: %s", rm.Packet.Topic))
 					continue
 				}
-				var msg map[string]any
-				if err := json.Unmarshal(rm.Packet.Payload, &msg); err != nil {
-					strictLog(fmt.Sprintf("failed to unmarshal message: %s\n(content: '%s')", err, rm.Packet.Payload))
-					continue
+
+				if cfg.Mode == MsgModeJSON {
+					var msg map[string]any
+					if err := json.Unmarshal(rm.Packet.Payload, &msg); err != nil {
+						strictLog(fmt.Sprintf("failed to unmarshal message: %s\n(content: '%s')", err, rm.Packet.Payload))
+						continue
+					}
+					go handleMessage(ctx, cfg, influxWriter, msg)
+				} else if cfg.Mode == MsgModeSingle {
+					go handleSinglePayload(ctx, cfg, influxWriter, rm.Packet.Payload)
+				} else {
+					panic(fmt.Sprintf("unknown message mode: %d", cfg.Mode))
 				}
-				go handleMessage(ctx, cfg, influxWriter, msg)
 			}
 		}
 	}(ctx)
@@ -399,26 +430,30 @@ func handleMessage(ctx context.Context, cfg Config, influxWriter api.WriteAPIBlo
 			return
 		}
 	}
-
 	maps.Copy(parsed.Tags, cfg.Influx.Tags)
 
-	point := influxdb2.NewPoint(
-		cfg.Influx.MeasurementName,
-		parsed.Tags,
-		parsed.Fields,
-		parsed.Timestamp,
-	)
+	writeParseResult(ctx, cfg, influxWriter, parsed)
+}
 
-	if err := retry.Do(
-		func() error {
-			ctx, cancel := context.WithTimeout(ctx, cfg.Influx.Timeout)
-			defer cancel()
-			return influxWriter.WritePoint(ctx, point)
-		},
-		retry.Attempts(cfg.Influx.Retries),
-	); err != nil {
-		log.Printf("failed to write to Influx: %s", err.Error())
+func handleSinglePayload(ctx context.Context, cfg Config, influxWriter api.WriteAPIBlocking, payload []byte) {
+	strictLog := StrictLoggerFromContext(ctx)
+
+	parsed, err := SinglePayloadParse(os.Getenv("M2I_SINGLE_FIELDNAME"), string(payload))
+	if err != nil {
+		ForEachError(err, func(err error) {
+			if errors.Is(err, ErrCastFailure) {
+				OnCastFailure(err)
+			} else if errors.Is(err, ErrFieldTagDeterminationFailure) {
+				OnFieldTagDeterminationFailure(err)
+			} else {
+				strictLog(fmt.Sprintf("failed to parse message: %s", err))
+			}
+		})
+		return
 	}
+	maps.Copy(parsed.Tags, cfg.Influx.Tags)
+
+	writeParseResult(ctx, cfg, influxWriter, parsed)
 }
 
 func newInfluxWriter(ctx context.Context, cfg *InfluxConfig) api.WriteAPIBlocking {
@@ -437,4 +472,24 @@ func newInfluxWriter(ctx context.Context, cfg *InfluxConfig) api.WriteAPIBlockin
 		log.Fatalf("InfluxDB did not pass health check: status %s; message '%s'", health.Status, *health.Message)
 	}
 	return influxClient.WriteAPIBlocking("", cfg.Bucket)
+}
+
+func writeParseResult(ctx context.Context, cfg Config, influxWriter api.WriteAPIBlocking, parsed ParseResult) {
+	point := influxdb2.NewPoint(
+		cfg.Influx.MeasurementName,
+		parsed.Tags,
+		parsed.Fields,
+		parsed.Timestamp,
+	)
+
+	if err := retry.Do(
+		func() error {
+			ctx, cancel := context.WithTimeout(ctx, cfg.Influx.Timeout)
+			defer cancel()
+			return influxWriter.WritePoint(ctx, point)
+		},
+		retry.Attempts(cfg.Influx.Retries),
+	); err != nil {
+		log.Printf("failed to write to Influx: %s", err.Error())
+	}
 }

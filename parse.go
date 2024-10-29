@@ -107,6 +107,22 @@ func MsgParse(msg map[string]any) (ParseResult, error) {
 	return retv, errs
 }
 
+func SinglePayloadParse(fieldName string, payload string) (ParseResult, error) {
+	retv := ParseResult{
+		Timestamp: time.Now().UTC(),
+		Fields:    make(map[string]any),
+		Tags:      make(map[string]string),
+	}
+
+	pr, err := parseKV(parseContext{isa: IsField}, fieldName, payload)
+	if err != nil {
+		return retv, err
+	}
+	maps.Copy(retv.Fields, pr.Fields)
+
+	return retv, nil
+}
+
 type parseContext struct {
 	isa  FieldTagHint
 	path []string
