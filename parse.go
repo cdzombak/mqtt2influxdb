@@ -236,7 +236,7 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 			}
 		case HintedBool:
 			if s, ok := v.(string); ok {
-				b, err := strconv.ParseBool(s)
+				b, err := ParseBool(s)
 				if err != nil {
 					return retv, fmt.Errorf("failed to parse %s (= %v) to bool: %w", myPathCanonical, v, ErrCastFailure)
 				}
@@ -259,4 +259,14 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 	}
 
 	return retv, nil
+}
+
+func ParseBool(str string) (bool, error) {
+	switch strings.ToLower(str) {
+	case "1", "t", "true", "on", "online":
+		return true, nil
+	case "0", "f", "false", "off", "offline":
+		return false, nil
+	}
+	return false, fmt.Errorf("failed to parse '%s' as bool", str)
 }
