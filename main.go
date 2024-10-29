@@ -114,7 +114,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  M2I_MODE=<json|single>")
 	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-name>_ISA=<field|tag>")
 	fmt.Fprintln(os.Stderr, "  M2I_SINGLE_FIELDNAME")
-	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name|SINGLE>_TYPE=<int|float|double|string|bool>")
+	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name>_TYPE=<int|float|double|string|bool>")
 	fmt.Fprintln(os.Stderr, "  DEFAULT_NUMBERS_TO_FLOAT=<true|false>")
 	fmt.Fprintln(os.Stderr, "  FIELDTAG_DETERMINATION_FAILURE=<ignore|log|fatal>")
 	fmt.Fprintln(os.Stderr, "  CAST_FAILURE=<ignore|log|fatal>")
