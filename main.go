@@ -341,12 +341,6 @@ func Main(ctx context.Context, cfg Config) error {
 			select {
 			case <-ctx.Done():
 			case rm := <-receivedMessages:
-				if rm.Packet.Topic != cfg.Mqtt.Topic {
-					// should never happen; can't hurt to check.
-					strictLog(fmt.Sprintf("received message on unexpected topic: %s", rm.Packet.Topic))
-					continue
-				}
-
 				if cfg.Mode == MsgModeJSON {
 					var msg map[string]any
 					if err := json.Unmarshal(rm.Packet.Payload, &msg); err != nil {
