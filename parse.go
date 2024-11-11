@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"maps"
 	"math"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -102,6 +103,27 @@ func MsgParse(msg map[string]any) (ParseResult, error) {
 		if additionalFields != nil {
 			maps.Copy(retv.Fields, additionalFields)
 		}
+	}
+
+	tagRenames := make(map[string]string)
+	for k, _ := range retv.Tags {
+		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
+			tagRenames[k] = renameTo
+		}
+	}
+	for k, v := range tagRenames {
+		retv.Tags[v] = retv.Tags[k]
+		delete(retv.Tags, k)
+	}
+	fieldRenames := make(map[string]string)
+	for k, _ := range retv.Fields {
+		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
+			fieldRenames[k] = renameTo
+		}
+	}
+	for k, v := range fieldRenames {
+		retv.Fields[v] = retv.Fields[k]
+		delete(retv.Fields, k)
 	}
 
 	return retv, errs
