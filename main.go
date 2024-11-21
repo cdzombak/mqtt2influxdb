@@ -29,6 +29,7 @@ type MsgMode int
 const (
 	MsgModeJSON MsgMode = iota
 	MsgModeSingle
+	MsgModeESPHome
 )
 
 type MqttConfig struct {
@@ -111,7 +112,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  INFLUX_RETRIES")
 	fmt.Fprintln(os.Stderr, "  INFLUX_TAGS")
 	fmt.Fprintln(os.Stderr, "  --")
-	fmt.Fprintln(os.Stderr, "  M2I_MODE=<json|single>")
+	fmt.Fprintln(os.Stderr, "  M2I_MODE=<json|single|esphome>")
 	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-name>_ISA=<field|tag>")
 	fmt.Fprintln(os.Stderr, "  M2I_SINGLE_FIELDNAME")
 	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name>_TYPE=<int|float|double|string|bool>")
@@ -178,6 +179,8 @@ func main() {
 			cfg.Mode = MsgModeJSON
 		} else if mode == "single" {
 			cfg.Mode = MsgModeSingle
+		} else if mode == "esphome" {
+			cfg.Mode = MsgModeESPHome
 		} else {
 			log.Fatalf("invalid M2I_MODE '%s'; must be 'json' or 'single'", mode)
 		}
@@ -348,6 +351,8 @@ func Main(ctx context.Context, cfg Config) error {
 						continue
 					}
 					go handleMessage(ctx, cfg, influxWriter, msg)
+				} else if cfg.Mode == MsgModeESPHome {
+					go handleESPHomeMsg(ctx, cfg, influxWriter, rm)
 				} else if cfg.Mode == MsgModeSingle {
 					go handleSinglePayload(ctx, cfg, influxWriter, rm.Packet.Payload)
 				} else {
@@ -365,11 +370,19 @@ func Main(ctx context.Context, cfg Config) error {
 		CleanStartOnInitialConnection: cfg.Mqtt.CleanStart,
 		SessionExpiryInterval:         cfg.Mqtt.SessionExpirySeconds,
 		OnConnectionUp: func(cm *autopaho.ConnectionManager, connAck *paho.Connack) {
-			log.Printf("connected to '%s'", cfg.Mqtt.Server)
 			// Subscribing in the OnConnectionUp callback is recommended (ensures the subscription is reestablished if the connection drops)
-			if _, err := cm.Subscribe(ctx, &paho.Subscribe{
-				Subscriptions: []paho.SubscribeOptions{{Topic: cfg.Mqtt.Topic, QoS: cfg.Mqtt.QoS}},
-			}); err != nil {
+			log.Printf("connected to '%s'", cfg.Mqtt.Server)
+
+			subs := []paho.SubscribeOptions{{Topic: cfg.Mqtt.Topic, QoS: cfg.Mqtt.QoS}}
+			if cfg.Mode == MsgModeESPHome {
+				subs = []paho.SubscribeOptions{
+					{Topic: cfg.Mqtt.Topic + "/binary_sensor/+/state", QoS: cfg.Mqtt.QoS},
+					{Topic: cfg.Mqtt.Topic + "/sensor/+/state", QoS: cfg.Mqtt.QoS},
+					{Topic: cfg.Mqtt.Topic + "/status", QoS: cfg.Mqtt.QoS},
+				}
+			}
+
+			if _, err := cm.Subscribe(ctx, &paho.Subscribe{Subscriptions: subs}); err != nil {
 				log.Fatalf("failed to subscribe to topic '%s': %s", cfg.Mqtt.Topic, err)
 			}
 			log.Printf("subscribed to '%s'", cfg.Mqtt.Topic)
@@ -448,6 +461,66 @@ func handleSinglePayload(ctx context.Context, cfg Config, influxWriter api.Write
 	}
 	maps.Copy(parsed.Tags, cfg.Influx.Tags)
 
+	writeParseResult(ctx, cfg, influxWriter, parsed)
+}
+
+func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPIBlocking, msg paho.PublishReceived) {
+	strictLog := StrictLoggerFromContext(ctx)
+
+	// this will be a single-style message on one of these topics:
+	// PREFIX/status (bool)
+	// PREFIX/binary_sensor/SENSOR_NAME/state (bool)
+	// PREFIX/sensor/SENSOR_NAME/state (use default parsing rules/hints)
+	parts := strings.Split(strings.TrimPrefix(msg.Packet.Topic, cfg.Mqtt.Topic+"/"), "/")
+
+	var (
+		parsed ParseResult
+		err    error
+	)
+
+	if parts[0] == "status" {
+		if len(parts) != 1 {
+			strictLog(fmt.Sprintf("/status topic has wrong number of parts: %s", msg.Packet.Topic))
+			return
+		}
+		if err := os.Setenv("M2I_STATUS_TYPE", "bool"); err != nil {
+			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
+		}
+		parsed, err = SinglePayloadParse("status", string(msg.Packet.Payload))
+	} else if parts[0] == "binary_sensor" {
+		if len(parts) != 3 {
+			strictLog(fmt.Sprintf("/binary_sensor topic has wrong number of parts: %s", msg.Packet.Topic))
+			return
+		}
+		if err := os.Setenv(
+			fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(parts[1])), "bool"); err != nil {
+			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
+		}
+		parsed, err = SinglePayloadParse(parts[1], string(msg.Packet.Payload))
+	} else if parts[0] == "sensor" {
+		if len(parts) != 3 {
+			strictLog(fmt.Sprintf("/sensor topic has wrong number of parts: %s", msg.Packet.Topic))
+			return
+		}
+		parsed, err = SinglePayloadParse(parts[1], string(msg.Packet.Payload))
+	} else {
+		strictLog(fmt.Sprintf("unexpected topic: %s", msg.Packet.Topic))
+		return
+	}
+
+	if err != nil {
+		ForEachError(err, func(err error) {
+			if errors.Is(err, ErrCastFailure) {
+				OnCastFailure(err)
+			} else if errors.Is(err, ErrFieldTagDeterminationFailure) {
+				OnFieldTagDeterminationFailure(err)
+			} else {
+				strictLog(fmt.Sprintf("failed to parse message: %s", err))
+			}
+		})
+		return
+	}
+	maps.Copy(parsed.Tags, cfg.Influx.Tags)
 	writeParseResult(ctx, cfg, influxWriter, parsed)
 }
 
