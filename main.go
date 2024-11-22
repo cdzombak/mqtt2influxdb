@@ -493,15 +493,15 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 			strictLog(fmt.Sprintf("topic has wrong number of parts: %s", msg.Packet.Topic))
 			return
 		}
-		if parts[0] == "binary_sensor" {
-			if err := os.Setenv(
-				fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(parts[1])), "bool"); err != nil {
-				panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
-			}
-		}
 		fName := parts[1]
 		if espTrimSensorPrefix != "" {
 			fName = strings.TrimPrefix(fName, espTrimSensorPrefix)
+		}
+		if parts[0] == "binary_sensor" {
+			if err := os.Setenv(
+				fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(fName)), "bool"); err != nil {
+				panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
+			}
 		}
 		parsed, err = SinglePayloadParse(fName, string(msg.Packet.Payload))
 	} else {
