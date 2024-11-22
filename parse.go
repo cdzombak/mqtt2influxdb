@@ -142,6 +142,17 @@ func SinglePayloadParse(fieldName string, payload string) (ParseResult, error) {
 	}
 	maps.Copy(retv.Fields, pr.Fields)
 
+	fieldRenames := make(map[string]string)
+	for k, _ := range retv.Fields {
+		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
+			fieldRenames[k] = renameTo
+		}
+	}
+	for k, v := range fieldRenames {
+		retv.Fields[v] = retv.Fields[k]
+		delete(retv.Fields, k)
+	}
+
 	return retv, nil
 }
 
