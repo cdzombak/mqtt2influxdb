@@ -378,6 +378,7 @@ func Main(ctx context.Context, cfg Config) error {
 				subs = []paho.SubscribeOptions{
 					{Topic: cfg.Mqtt.Topic + "/binary_sensor/+/state", QoS: cfg.Mqtt.QoS},
 					{Topic: cfg.Mqtt.Topic + "/sensor/+/state", QoS: cfg.Mqtt.QoS},
+					{Topic: cfg.Mqtt.Topic + "/switch/+/state", QoS: cfg.Mqtt.QoS},
 					{Topic: cfg.Mqtt.Topic + "/status", QoS: cfg.Mqtt.QoS},
 				}
 			}
@@ -470,6 +471,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 	// this will be a single-style message on one of these topics:
 	// PREFIX/status (bool)
 	// PREFIX/binary_sensor/SENSOR_NAME/state (bool)
+	// PREFIX/switch/SWITCH_NAME/state (bool)
 	// PREFIX/sensor/SENSOR_NAME/state (use default parsing rules/hints)
 	parts := strings.Split(strings.TrimPrefix(msg.Packet.Topic, cfg.Mqtt.Topic+"/"), "/")
 	espTrimSensorPrefix := os.Getenv("M2I_ESPHOME_TRIM_SENSOR_PREFIX")
@@ -488,7 +490,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
 		}
 		parsed, err = SinglePayloadParse("status", string(msg.Packet.Payload))
-	} else if parts[0] == "binary_sensor" || parts[0] == "sensor" {
+	} else if parts[0] == "binary_sensor" || parts[0] == "sensor" || parts[0] == "switch" {
 		if len(parts) != 3 {
 			strictLog(fmt.Sprintf("topic has wrong number of parts: %s", msg.Packet.Topic))
 			return
@@ -497,7 +499,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 		if espTrimSensorPrefix != "" {
 			fName = strings.TrimPrefix(fName, espTrimSensorPrefix)
 		}
-		if parts[0] == "binary_sensor" {
+		if parts[0] == "binary_sensor" || parts[0] == "switch" {
 			if err := os.Setenv(
 				fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(fName)), "bool"); err != nil {
 				panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
