@@ -472,6 +472,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 	// PREFIX/binary_sensor/SENSOR_NAME/state (bool)
 	// PREFIX/sensor/SENSOR_NAME/state (use default parsing rules/hints)
 	parts := strings.Split(strings.TrimPrefix(msg.Packet.Topic, cfg.Mqtt.Topic+"/"), "/")
+	espTrimSensorPrefix := os.Getenv("M2I_ESPHOME_TRIM_SENSOR_PREFIX")
 
 	var (
 		parsed ParseResult
@@ -487,22 +488,22 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
 		}
 		parsed, err = SinglePayloadParse("status", string(msg.Packet.Payload))
-	} else if parts[0] == "binary_sensor" {
+	} else if parts[0] == "binary_sensor" || parts[0] == "sensor" {
 		if len(parts) != 3 {
-			strictLog(fmt.Sprintf("/binary_sensor topic has wrong number of parts: %s", msg.Packet.Topic))
+			strictLog(fmt.Sprintf("topic has wrong number of parts: %s", msg.Packet.Topic))
 			return
 		}
-		if err := os.Setenv(
-			fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(parts[1])), "bool"); err != nil {
-			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
+		if parts[0] == "binary_sensor" {
+			if err := os.Setenv(
+				fmt.Sprintf("M2I_%s_TYPE", strings.ToUpper(parts[1])), "bool"); err != nil {
+				panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
+			}
 		}
-		parsed, err = SinglePayloadParse(parts[1], string(msg.Packet.Payload))
-	} else if parts[0] == "sensor" {
-		if len(parts) != 3 {
-			strictLog(fmt.Sprintf("/sensor topic has wrong number of parts: %s", msg.Packet.Topic))
-			return
+		fName := parts[1]
+		if espTrimSensorPrefix != "" {
+			fName = strings.TrimPrefix(fName, espTrimSensorPrefix)
 		}
-		parsed, err = SinglePayloadParse(parts[1], string(msg.Packet.Payload))
+		parsed, err = SinglePayloadParse(fName, string(msg.Packet.Payload))
 	} else {
 		strictLog(fmt.Sprintf("unexpected topic: %s", msg.Packet.Topic))
 		return
