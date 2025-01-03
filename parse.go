@@ -284,6 +284,12 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 				} else {
 					parsedV = true
 				}
+			} else if i, ok := v.(float64); ok && i >= 0 {
+				if i < 0.1 {
+					parsedV = false
+				} else {
+					parsedV = true
+				}
 			} else if b, ok := v.(bool); ok {
 				parsedV = b
 			} else {
