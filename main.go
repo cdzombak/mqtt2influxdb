@@ -288,7 +288,7 @@ func main() {
 	if os.Getenv("INFLUX_TAGS") != "" {
 		tags := strings.Split(os.Getenv("INFLUX_TAGS"), ",")
 		for _, tag := range tags {
-			parts := strings.SplitN(tag, "=", 1)
+			parts := strings.SplitN(tag, "=", 2)
 			if len(parts) != 2 {
 				log.Fatalf("failed to parse Influx tag '%s'", tag)
 			}
