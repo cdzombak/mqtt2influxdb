@@ -51,6 +51,10 @@ The timestamp for each InfluxDB point defaults to the time the message was proce
 
 If the message contains a top-level entry named `at`, `ts`, or `time`, that value will be parsed and used as the timestamp.
 
+#### rtl_433 compatibility
+
+tk: ` -M time:iso:utc:tz` 
+
 ### Key Names, Canonicalization, and Nesting
 
 tk
