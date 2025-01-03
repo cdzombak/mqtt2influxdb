@@ -177,6 +177,8 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 		myIsa = FieldTagHintFor(myPathCanonical)
 	}
 
+	// TODO(cdzombak): add ISA=drop
+
 	if _, ok := v.([]any); ok {
 		var errs error
 		for i, item := range v.([]any) {
@@ -245,7 +247,7 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 					parsedV = 0
 				}
 			} else {
-				return retv, fmt.Errorf("failed to convert %s (= %v) to int: %w", myPathCanonical, v, ErrCastFailure)
+				return retv, fmt.Errorf("failed to convert %s (= %v (%T)) to int: %w", myPathCanonical, v, v, ErrCastFailure)
 			}
 		case HintedDouble:
 			if s, ok := v.(string); ok {
@@ -265,7 +267,7 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 					parsedV = 0.0
 				}
 			} else {
-				return retv, fmt.Errorf("failed to convert %s (= %v) to double: %w", myPathCanonical, v, ErrCastFailure)
+				return retv, fmt.Errorf("failed to convert %s (= %v (%T)) to double: %w", myPathCanonical, v, v, ErrCastFailure)
 			}
 		case HintedBool:
 			if s, ok := v.(string); ok {
@@ -283,7 +285,7 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 			} else if b, ok := v.(bool); ok {
 				parsedV = b
 			} else {
-				return retv, fmt.Errorf("failed to convert %s (= %v) to bool: %w", myPathCanonical, v, ErrCastFailure)
+				return retv, fmt.Errorf("failed to convert %s (= %v (%T)) to bool: %w", myPathCanonical, v, v, ErrCastFailure)
 			}
 		}
 		retv.Fields[string(myPathCanonical)] = parsedV
