@@ -113,7 +113,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  INFLUX_TAGS")
 	fmt.Fprintln(os.Stderr, "  --")
 	fmt.Fprintln(os.Stderr, "  M2I_MODE=<json|single|esphome>")
-	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-name>_ISA=<field|tag>")
+	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-name>_ISA=<field|tag|drop>")
 	fmt.Fprintln(os.Stderr, "  M2I_SINGLE_FIELDNAME")
 	fmt.Fprintln(os.Stderr, "  M2I_<canonicalized-field-name>_TYPE=<int|float|double|string|bool>")
 	fmt.Fprintln(os.Stderr, "  DEFAULT_NUMBERS_TO_FLOAT=<true|false>")

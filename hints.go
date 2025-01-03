@@ -17,6 +17,7 @@ const (
 	FieldTagUnhinted FieldTagHint = iota
 	IsField
 	IsTag
+	DropThis
 )
 
 var (
@@ -39,6 +40,8 @@ func FieldTagHintFor(s CanonicalizedKey) FieldTagHint {
 		retv = IsField
 	case "tag":
 		retv = IsTag
+	case "drop":
+		retv = DropThis
 	}
 
 	fieldTagHintCache.Set(string(s), retv)

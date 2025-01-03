@@ -101,7 +101,7 @@ tk
 
 Typically, we auto TK
 
-Format: `M2I_<canonicalized-name>_ISA=<field|tag>`
+Format: `M2I_<canonicalized-name>_ISA=<field|tag|drop>`
 
 - `FIELDTAG_DETERMINATION_FAILURE`: `ignore`, `log`, or `fatal`
 

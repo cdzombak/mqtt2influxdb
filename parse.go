@@ -177,7 +177,9 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 		myIsa = FieldTagHintFor(myPathCanonical)
 	}
 
-	// TODO(cdzombak): add ISA=drop
+	if myIsa == DropThis {
+		return retv, nil
+	}
 
 	if _, ok := v.([]any); ok {
 		var errs error
