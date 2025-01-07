@@ -136,6 +136,12 @@ If a message contains a timestamp field, it must be a string and will be parsed 
 
 In the future, multiple timestamp formats may be supported; see [#3](https://github.com/cdzombak/mqtt2influxdb/issues/3).
 
+### Deduplication
+
+tk; for JSON mode only
+
+- `DEDUPE_ON`
+
 ### Multiple .env files
 
 tk

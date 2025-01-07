@@ -6,6 +6,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"hash/fnv"
 	"log"
 	"maps"
 	"net/url"
@@ -64,6 +65,7 @@ type HeartbeatConfig struct {
 
 type Config struct {
 	Mode      MsgMode
+	DedupeOn  string
 	Mqtt      *MqttConfig
 	Influx    *InfluxConfig
 	Heartbeat *HeartbeatConfig
@@ -119,6 +121,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  DEFAULT_NUMBERS_TO_FLOAT=<true|false>")
 	fmt.Fprintln(os.Stderr, "  FIELDTAG_DETERMINATION_FAILURE=<ignore|log|fatal>")
 	fmt.Fprintln(os.Stderr, "  CAST_FAILURE=<ignore|log|fatal>")
+	fmt.Fprintln(os.Stderr, "  DEDUPE_ON")
 	fmt.Fprintln(os.Stderr, "  --")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_GET_URL")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_INTERVAL_S")
@@ -151,7 +154,8 @@ func main() {
 	SetStrictEnvPolicies(*strict)
 
 	cfg := Config{
-		Mode: MsgModeJSON,
+		Mode:     MsgModeJSON,
+		DedupeOn: os.Getenv("DEDUPE_ON"),
 		Mqtt: &MqttConfig{
 			Topic:            os.Getenv("MQTT_TOPIC"),
 			User:             os.Getenv("MQTT_USER"),
@@ -187,6 +191,9 @@ func main() {
 	}
 	if cfg.Mode == MsgModeSingle && os.Getenv("M2I_SINGLE_FIELDNAME") == "" {
 		log.Fatalf("M2I_SINGLE_FIELDNAME must be set when M2I_MODE=single")
+	}
+	if cfg.Mode != MsgModeJSON && cfg.DedupeOn != "" {
+		log.Fatalf("DEDUPE_ON is only supported in JSON mode")
 	}
 
 	if cfg.Mqtt.ClientID == "" {
@@ -338,6 +345,8 @@ func Main(ctx context.Context, cfg Config) error {
 
 	receivedMessages := make(chan paho.PublishReceived)
 	go func(ctx context.Context) {
+		var dedupeValuesSeen = make(map[uint64]struct{})
+
 		for {
 			select {
 			case <-ctx.Done():
@@ -348,6 +357,22 @@ func Main(ctx context.Context, cfg Config) error {
 					if err := json.Unmarshal(rm.Packet.Payload, &msg); err != nil {
 						strictLog(fmt.Sprintf("failed to unmarshal message: %s\n(content: '%s')", err, rm.Packet.Payload))
 						continue
+					}
+					if cfg.DedupeOn != "" {
+						dedupeValue := msg[cfg.DedupeOn]
+						if dedupeValue == nil {
+							strictLog(fmt.Sprintf("dedupe field '%s' not found in message", cfg.DedupeOn))
+						} else {
+							dedupeBytes, err := json.Marshal(dedupeValue)
+							if err != nil {
+								log.Fatalf("failed to create bytes for dedupe field '%s': %s", cfg.DedupeOn, err)
+							}
+							dedupeFp := fp(dedupeBytes)
+							if _, seen := dedupeValuesSeen[dedupeFp]; seen {
+								continue
+							}
+							dedupeValuesSeen[dedupeFp] = struct{}{}
+						}
 					}
 					go handleMessage(ctx, cfg, influxWriter, msg)
 				} else if cfg.Mode == MsgModeESPHome {
@@ -562,4 +587,12 @@ func writeParseResult(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 	); err != nil {
 		log.Printf("failed to write to Influx: %s", err.Error())
 	}
+}
+
+func fp(d []byte) uint64 {
+	hash := fnv.New64a()
+	if _, err := hash.Write(d); err != nil {
+		panic(err)
+	}
+	return hash.Sum64()
 }
