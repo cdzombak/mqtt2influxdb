@@ -197,8 +197,6 @@ func main() {
 		clientID := fmt.Sprintf("%s-%s", hostname, RandAlnumString(8))
 		log.Printf("generated client ID: %s", clientID)
 	}
-	// check for client ID conflicts with other instances on this network
-	// ( tracked at https://github.com/cdzombak/mqtt2influxdb/issues/4 )
 
 	if cfg.Mqtt.Topic == "" {
 		log.Fatalf("MQTT_TOPIC must be set")
