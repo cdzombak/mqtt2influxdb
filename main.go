@@ -385,7 +385,7 @@ func Main(ctx context.Context, cfg Config) error {
 			if _, err := cm.Subscribe(ctx, &paho.Subscribe{Subscriptions: subs}); err != nil {
 				log.Fatalf("failed to subscribe to topic '%s': %s", cfg.Mqtt.Topic, err)
 			}
-			log.Printf("subscribed to '%s'", cfg.Mqtt.Topic)
+			log.Printf("subscribed to topic '%s'", cfg.Mqtt.Topic)
 		},
 		OnConnectError: func(err error) {
 			log.Printf("error while attempting MQTT connection: %s", err)
