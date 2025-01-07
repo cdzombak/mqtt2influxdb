@@ -341,6 +341,7 @@ func Main(ctx context.Context, cfg Config) error {
 		for {
 			select {
 			case <-ctx.Done():
+				return
 			case rm := <-receivedMessages:
 				if cfg.Mode == MsgModeJSON {
 					var msg map[string]any
