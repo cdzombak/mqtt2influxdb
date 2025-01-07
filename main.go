@@ -194,8 +194,8 @@ func main() {
 		if err != nil {
 			log.Fatalf("failed to get hostname: %s", err)
 		}
-		clientID := fmt.Sprintf("%s-%s", hostname, RandAlnumString(8))
-		log.Printf("generated client ID: %s", clientID)
+		clientID := fmt.Sprintf("%s-mqtt2influxdb-%s", hostname, RandAlnumString(8))
+		log.Printf("generated MQTT client ID: %s", clientID)
 	}
 
 	if cfg.Mqtt.Topic == "" {
