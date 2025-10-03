@@ -106,7 +106,7 @@ func MsgParse(msg map[string]any) (ParseResult, error) {
 	}
 
 	tagRenames := make(map[string]string)
-	for k, _ := range retv.Tags {
+	for k := range retv.Tags {
 		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
 			tagRenames[k] = renameTo
 		}
@@ -116,7 +116,7 @@ func MsgParse(msg map[string]any) (ParseResult, error) {
 		delete(retv.Tags, k)
 	}
 	fieldRenames := make(map[string]string)
-	for k, _ := range retv.Fields {
+	for k := range retv.Fields {
 		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
 			fieldRenames[k] = renameTo
 		}
@@ -143,7 +143,7 @@ func SinglePayloadParse(fieldName string, payload string) (ParseResult, error) {
 	maps.Copy(retv.Fields, pr.Fields)
 
 	fieldRenames := make(map[string]string)
-	for k, _ := range retv.Fields {
+	for k := range retv.Fields {
 		if renameTo := strings.ToLower(os.Getenv(fmt.Sprintf("M2I_%s_RENAME", strings.ToUpper(k)))); renameTo != "" {
 			fieldRenames[k] = renameTo
 		}
