@@ -179,13 +179,14 @@ func main() {
 
 	if os.Getenv("M2I_MODE") != "" {
 		mode := strings.ToLower(os.Getenv("M2I_MODE"))
-		if mode == "json" {
+		switch mode {
+		case "json":
 			cfg.Mode = MsgModeJSON
-		} else if mode == "single" {
+		case "single":
 			cfg.Mode = MsgModeSingle
-		} else if mode == "esphome" {
+		case "esphome":
 			cfg.Mode = MsgModeESPHome
-		} else {
+		default:
 			log.Fatalf("invalid M2I_MODE '%s'; must be 'json' or 'single'", mode)
 		}
 	}
@@ -505,7 +506,8 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 		err    error
 	)
 
-	if parts[0] == "status" {
+	switch parts[0] {
+	case "status":
 		if len(parts) != 1 {
 			strictLog(fmt.Sprintf("/status topic has wrong number of parts: %s", msg.Packet.Topic))
 			return
@@ -514,7 +516,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 			panic(fmt.Sprintf("os.Setenv failed: %s", err.Error()))
 		}
 		parsed, err = SinglePayloadParse("status", string(msg.Packet.Payload))
-	} else if parts[0] == "binary_sensor" || parts[0] == "sensor" || parts[0] == "switch" {
+	case "binary_sensor", "sensor", "switch":
 		if len(parts) != 3 {
 			strictLog(fmt.Sprintf("topic has wrong number of parts: %s", msg.Packet.Topic))
 			return
@@ -530,7 +532,7 @@ func handleESPHomeMsg(ctx context.Context, cfg Config, influxWriter api.WriteAPI
 			}
 		}
 		parsed, err = SinglePayloadParse(fName, string(msg.Packet.Payload))
-	} else {
+	default:
 		strictLog(fmt.Sprintf("unexpected topic: %s", msg.Packet.Topic))
 		return
 	}
