@@ -50,9 +50,15 @@ services:
       M2I_MODE: json
       HEARTBEAT_INTERVAL_S: 30
       HEARTBEAT_THRESHOLD_S: 120
-      HEARTBEAT_GET_URL: https://uptimekuma.example.com:9001/api/push/abcdabcd?status=up&msg=OK&ping=
-      # optionally, serve a health endpoint for external monitoring:
-      # HEARTBEAT_HEALTH_PORT: 8080
+      HEARTBEAT_HEALTH_PORT: 8080
+      # optionally, ping a remote monitor like Uptime Kuma:
+      # HEARTBEAT_GET_URL: https://uptimekuma.example.com:9001/api/push/abcdabcd?status=up&msg=OK&ping=
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 ```
 
 ### Message Modes

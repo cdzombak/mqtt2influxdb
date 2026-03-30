@@ -9,11 +9,11 @@ WORKDIR /src/${BIN_NAME}
 COPY . .
 RUN CGO_ENABLED=0 go build -ldflags="-X main.version=${BIN_VERSION}" -o ./out/${BIN_NAME} .
 
-FROM scratch
+FROM alpine:latest
 ARG BIN_NAME
 ARG BIN_VERSION
+RUN apk add --no-cache curl
 COPY --from=builder /src/${BIN_NAME}/out/${BIN_NAME} /usr/bin/${BIN_NAME}
-COPY --from=builder /etc/ssl/certs/ca-certificates.crt /etc/ssl/certs/
 ENTRYPOINT ["/usr/bin/mqtt2influxdb"]
 
 LABEL license="LGPL3"
