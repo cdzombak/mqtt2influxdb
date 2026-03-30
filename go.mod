@@ -4,6 +4,7 @@ go 1.24.0
 
 require (
 	github.com/avast/retry-go v3.0.0+incompatible
+	github.com/cdzombak/heartbeat v1.1.1
 	github.com/eclipse/paho.golang v0.23.0
 	github.com/hashicorp/go-multierror v1.1.1
 	github.com/influxdata/influxdb-client-go/v2 v2.14.0
@@ -12,7 +13,6 @@ require (
 
 require (
 	github.com/apapsch/go-jsonmerge/v2 v2.0.0 // indirect
-	github.com/cdzombak/heartbeat v1.1.1 // indirect
 	github.com/google/uuid v1.3.1 // indirect
 	github.com/gorilla/websocket v1.5.3 // indirect
 	github.com/hashicorp/errwrap v1.0.0 // indirect
