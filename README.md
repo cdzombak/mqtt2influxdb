@@ -21,7 +21,7 @@ Each `mqtt2influxdb` instance subscribes to a single MQTT topic (or, in ESPHome 
 
 ## Usage
 
-```
+```text
 mqtt2influxdb [options]
 ```
 
@@ -156,7 +156,7 @@ All configuration is done through environment variables. These can be set direct
 
 By default, `mqtt2influxdb` needs to determine whether each key in the message is an InfluxDB field or a tag. You can control this using environment variables of the form:
 
-```
+```text
 M2I_<CANONICALIZED_NAME>_ISA=<field|tag|drop>
 ```
 
@@ -176,7 +176,7 @@ If a key's field/tag status cannot be determined (no ISA hint and no prefix like
 
 By default, values are written to InfluxDB with their JSON type. You can override this with environment variables of the form:
 
-```
+```text
 M2I_<CANONICALIZED_FIELD_NAME>_TYPE=<int|float|double|string|bool>
 ```
 
@@ -194,7 +194,7 @@ M2I_<CANONICALIZED_FIELD_NAME>_TYPE=<int|float|double|string|bool>
 
 You can rename any field or tag after canonicalization using environment variables of the form:
 
-```
+```text
 M2I_<CANONICALIZED_NAME>_RENAME=<new_name>
 ```
 
@@ -202,7 +202,7 @@ The new name is always lowercased. This applies in all modes (JSON, single-value
 
 For example, to rename a field `temp_f` to `temperature`:
 
-```
+```text
 M2I_TEMP_F_RENAME=temperature
 ```
 
@@ -216,7 +216,7 @@ M2I_TEMP_F_RENAME=temperature
 | `HEARTBEAT_GET_URL` | URL to send periodic GET requests to as a heartbeat. |
 | `HEARTBEAT_INTERVAL_S` | Interval between heartbeat requests, in seconds. |
 | `HEARTBEAT_THRESHOLD_S` | Maximum time since last successful MQTT message before the health check reports unhealthy, in seconds. |
-| `HEALTH_PORT` | Port to serve a health check HTTP endpoint on. |
+| `HEARTBEAT_HEALTH_PORT` | Port to serve a health check HTTP endpoint on. |
 
 ### Timestamp Parsing
 
@@ -229,7 +229,7 @@ In the future, multiple timestamp formats may be supported; see [#3](https://git
 
 ### Deduplication
 
-In JSON mode, you can enable deduplication to skip messages that have already been processed. Set `DEDUPE_ON` to the name of a JSON key whose value should be used for deduplication. If two consecutive messages have the same value for this key, the second message is skipped.
+In JSON mode, you can enable deduplication to skip messages that have already been processed. Set `DEDUPE_ON` to the name of a JSON key whose value should be used for deduplication. Any message whose value for this key has already been seen during the application's lifetime will be skipped.
 
 > [!NOTE]
 > `DEDUPE_ON` is only supported in JSON mode.
