@@ -285,7 +285,7 @@ func parseKV(ctx parseContext, k string, v any) (ParseResult, error) {
 					parsedV = true
 				}
 			} else if i, ok := v.(float64); ok && i >= 0 {
-				if i < 0.1 {
+				if i < math.SmallestNonzeroFloat64 {
 					parsedV = false
 				} else {
 					parsedV = true
