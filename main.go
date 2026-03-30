@@ -18,6 +18,7 @@ import (
 	"time"
 
 	"github.com/avast/retry-go"
+	"github.com/cdzombak/heartbeat"
 	"github.com/eclipse/paho.golang/autopaho"
 	"github.com/eclipse/paho.golang/paho"
 	influxdb2 "github.com/influxdata/influxdb-client-go/v2"
@@ -126,7 +127,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_GET_URL")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_INTERVAL_S")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_THRESHOLD_S")
-	fmt.Fprintln(os.Stderr, "  HEALTH_PORT")
+	fmt.Fprintln(os.Stderr, "  HEARTBEAT_HEALTH_PORT")
 	fmt.Fprintln(os.Stderr, "")
 	fmt.Fprintln(os.Stderr, "mqtt2influxdb is written by Chris Dzombak <https://www.dzombak.com> and licensed under the LGPL-3.0 license.")
 	fmt.Fprintln(os.Stderr, "🌐 https://www.github.com/cdzombak/mqtt2influxdb")
@@ -339,9 +340,22 @@ func Main(ctx context.Context, cfg Config) error {
 
 	influxWriter := newInfluxWriter(ctx, cfg.Influx)
 
-	// heartbeat tracked at: https://github.com/cdzombak/mqtt2influxdb/issues/2
-	if cfg.Heartbeat.GetURL != "" || cfg.Heartbeat.HealthPort != 0 {
-		log.Fatalf("heartbeat is not yet implemented")
+	var hb heartbeat.Heartbeat
+	if cfg.Heartbeat != nil && (cfg.Heartbeat.GetURL != "" || cfg.Heartbeat.HealthPort != 0) {
+		var err error
+		hb, err = heartbeat.NewHeartbeat(&heartbeat.Config{
+			HeartbeatInterval: cfg.Heartbeat.Interval,
+			LivenessThreshold: cfg.Heartbeat.Threshold,
+			HeartbeatURL:      cfg.Heartbeat.GetURL,
+			Port:              int(cfg.Heartbeat.HealthPort),
+			OnError: func(err error) {
+				log.Printf("heartbeat error: %s", err)
+			},
+		})
+		if err != nil {
+			log.Fatalf("failed to create heartbeat: %s", err)
+		}
+		hb.Start()
 	}
 
 	receivedMessages := make(chan paho.PublishReceived)
@@ -353,6 +367,9 @@ func Main(ctx context.Context, cfg Config) error {
 			case <-ctx.Done():
 				return
 			case rm := <-receivedMessages:
+				if hb != nil {
+					hb.Alive(time.Now())
+				}
 				if cfg.Mode == MsgModeJSON {
 					var msg map[string]any
 					if err := json.Unmarshal(rm.Packet.Payload, &msg); err != nil {

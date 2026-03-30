@@ -48,6 +48,17 @@ services:
       INFLUX_BUCKET: my-db/autogen
       INFLUX_MEASUREMENT_NAME: temperature
       M2I_MODE: json
+      HEARTBEAT_INTERVAL_S: 30
+      HEARTBEAT_THRESHOLD_S: 120
+      HEARTBEAT_HEALTH_PORT: 8080
+      # optionally, ping a remote monitor like Uptime Kuma:
+      # HEARTBEAT_GET_URL: https://uptimekuma.example.com:9001/api/push/abcdabcd?status=up&msg=OK&ping=
+    healthcheck:
+      test: ["CMD", "curl", "-sf", "http://localhost:8080/"]
+      interval: 60s
+      timeout: 5s
+      retries: 3
+      start_period: 10s
 ```
 
 ### Message Modes
@@ -208,15 +219,18 @@ M2I_TEMP_F_RENAME=temperature
 
 ### Heartbeat
 
-> [!NOTE]
-> Heartbeat support is not yet implemented (tracked in [#2](https://github.com/cdzombak/mqtt2influxdb/issues/2)).
+Heartbeat support allows health monitoring via an outgoing HTTP GET heartbeat and/or an HTTP health check server. The heartbeat is triggered each time an MQTT message is received. If no message has been received within the liveness threshold, the health endpoint reports unhealthy and outgoing heartbeats are paused.
+
+This is implemented using [`github.com/cdzombak/heartbeat`](https://github.com/cdzombak/heartbeat).
 
 | Variable | Description |
 |---|---|
-| `HEARTBEAT_GET_URL` | URL to send periodic GET requests to as a heartbeat. |
-| `HEARTBEAT_INTERVAL_S` | Interval between heartbeat requests, in seconds. |
-| `HEARTBEAT_THRESHOLD_S` | Maximum time since last successful MQTT message before the health check reports unhealthy, in seconds. |
-| `HEARTBEAT_HEALTH_PORT` | Port to serve a health check HTTP endpoint on. |
+| `HEARTBEAT_GET_URL` | URL to send periodic GET requests to as a heartbeat. Works well with [Uptime Kuma](https://github.com/louislam/uptime-kuma) push monitors. |
+| `HEARTBEAT_INTERVAL_S` | Interval between heartbeat GET requests, in seconds. Required if `HEARTBEAT_GET_URL` is set. |
+| `HEARTBEAT_THRESHOLD_S` | Maximum time since the last received MQTT message before the health check reports unhealthy and outgoing heartbeats are paused, in seconds. Required if any heartbeat feature is enabled. |
+| `HEARTBEAT_HEALTH_PORT` | Port to serve a health check HTTP endpoint on. A GET to `/` returns `{"ok":true}` with HTTP 200 when healthy, or `{"ok":false}` with HTTP 503 when unhealthy. |
+
+At least one of `HEARTBEAT_GET_URL` or `HEARTBEAT_HEALTH_PORT` must be set for heartbeat features to be enabled.
 
 ### Timestamp Parsing
 
