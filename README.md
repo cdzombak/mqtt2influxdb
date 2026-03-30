@@ -40,7 +40,7 @@ A Docker image is available. All configuration is done through environment varia
 # docker-compose.yml example:
 services:
   mqtt2influxdb:
-    image: mqtt2influxdb:latest
+    image: ghcr.io/cdzombak/mqtt2influxdb:latest
     environment:
       MQTT_SERVER: mqtt://my-broker:1883
       MQTT_TOPIC: sensors/temperature
