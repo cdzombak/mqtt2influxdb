@@ -446,9 +446,9 @@ func Main(ctx context.Context, cfg Config) error {
 			},
 			OnServerDisconnect: func(d *paho.Disconnect) {
 				if d.Properties != nil {
-					log.Fatalf("MQTT server requested disconnect: %s\n", d.Properties.ReasonString)
+					log.Printf("MQTT server requested disconnect: %s\n", d.Properties.ReasonString)
 				} else {
-					log.Fatalf("MQTT server requested disconnect; reason code: %d\n", d.ReasonCode)
+					log.Printf("MQTT server requested disconnect; reason code: %d\n", d.ReasonCode)
 				}
 			},
 		},
