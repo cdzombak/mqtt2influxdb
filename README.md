@@ -243,7 +243,9 @@ In the future, multiple timestamp formats may be supported; see [#3](https://git
 
 ### Deduplication
 
-In JSON mode, you can enable deduplication to skip messages that have already been processed. Set `DEDUPE_ON` to the name of a JSON key whose value should be used for deduplication. Any message whose value for this key has already been seen during the application's lifetime will be skipped.
+In JSON mode, you can enable deduplication to skip messages that have already been processed. Set `DEDUPE_ON` to the name of a JSON key whose value should be used for deduplication. Any message whose value for this key has already been seen within the deduplication period will be skipped.
+
+`DEDUPE_PERIOD_S` controls how long (in seconds) a seen value is remembered for deduplication. The default is `300` (5 minutes). After this period, a previously-seen value will be processed again.
 
 > [!NOTE]
 > `DEDUPE_ON` is only supported in JSON mode.

@@ -65,11 +65,12 @@ type HeartbeatConfig struct {
 }
 
 type Config struct {
-	Mode      MsgMode
-	DedupeOn  string
-	Mqtt      *MqttConfig
-	Influx    *InfluxConfig
-	Heartbeat *HeartbeatConfig
+	Mode         MsgMode
+	DedupeOn     string
+	DedupePeriod time.Duration
+	Mqtt         *MqttConfig
+	Influx       *InfluxConfig
+	Heartbeat    *HeartbeatConfig
 }
 
 var version = "<dev>"
@@ -123,6 +124,7 @@ func usage() {
 	fmt.Fprintln(os.Stderr, "  FIELDTAG_DETERMINATION_FAILURE=<ignore|log|fatal>")
 	fmt.Fprintln(os.Stderr, "  CAST_FAILURE=<ignore|log|fatal>")
 	fmt.Fprintln(os.Stderr, "  DEDUPE_ON")
+	fmt.Fprintln(os.Stderr, "  DEDUPE_PERIOD_S")
 	fmt.Fprintln(os.Stderr, "  --")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_GET_URL")
 	fmt.Fprintln(os.Stderr, "  HEARTBEAT_INTERVAL_S")
@@ -155,8 +157,9 @@ func main() {
 	SetStrictEnvPolicies(*strict)
 
 	cfg := Config{
-		Mode:     MsgModeJSON,
-		DedupeOn: os.Getenv("DEDUPE_ON"),
+		Mode:         MsgModeJSON,
+		DedupeOn:     os.Getenv("DEDUPE_ON"),
+		DedupePeriod: 300 * time.Second,
 		Mqtt: &MqttConfig{
 			Topic:            os.Getenv("MQTT_TOPIC"),
 			User:             os.Getenv("MQTT_USER"),
@@ -196,6 +199,13 @@ func main() {
 	}
 	if cfg.Mode != MsgModeJSON && cfg.DedupeOn != "" {
 		log.Fatalf("DEDUPE_ON is only supported in JSON mode")
+	}
+	if os.Getenv("DEDUPE_PERIOD_S") != "" {
+		dedupePeriod, err := strconv.ParseUint(os.Getenv("DEDUPE_PERIOD_S"), 10, 64)
+		if err != nil {
+			log.Fatalf("failed to parse DEDUPE_PERIOD_S '%s': %s", os.Getenv("DEDUPE_PERIOD_S"), err)
+		}
+		cfg.DedupePeriod = time.Duration(dedupePeriod) * time.Second
 	}
 
 	if cfg.Mqtt.ClientID == "" {
@@ -360,7 +370,8 @@ func Main(ctx context.Context, cfg Config) error {
 
 	receivedMessages := make(chan paho.PublishReceived)
 	go func(ctx context.Context) {
-		var dedupeValuesSeen = make(map[uint64]struct{})
+		dedupeValuesSeen := make(map[uint64]time.Time)
+		dedupeLastCleanup := time.Now()
 
 		for {
 			select {
@@ -377,6 +388,7 @@ func Main(ctx context.Context, cfg Config) error {
 						continue
 					}
 					if cfg.DedupeOn != "" {
+						now := time.Now()
 						dedupeValue := msg[cfg.DedupeOn]
 						if dedupeValue == nil {
 							strictLog(fmt.Sprintf("dedupe field '%s' not found in message", cfg.DedupeOn))
@@ -386,10 +398,18 @@ func Main(ctx context.Context, cfg Config) error {
 								log.Fatalf("failed to create bytes for dedupe field '%s': %s", cfg.DedupeOn, err)
 							}
 							dedupeFp := fp(dedupeBytes)
-							if _, seen := dedupeValuesSeen[dedupeFp]; seen {
+							if seenAt, seen := dedupeValuesSeen[dedupeFp]; seen && now.Sub(seenAt) < cfg.DedupePeriod {
 								continue
 							}
-							dedupeValuesSeen[dedupeFp] = struct{}{}
+							dedupeValuesSeen[dedupeFp] = now
+						}
+						if now.Sub(dedupeLastCleanup) >= cfg.DedupePeriod {
+							for k, seenAt := range dedupeValuesSeen {
+								if now.Sub(seenAt) >= cfg.DedupePeriod {
+									delete(dedupeValuesSeen, k)
+								}
+							}
+							dedupeLastCleanup = now
 						}
 					}
 					go handleMessage(ctx, cfg, influxWriter, msg)
