@@ -34,7 +34,7 @@ mqtt2influxdb [options]
 
 ### Docker
 
-A Docker image is available. All configuration is done through environment variables (and optionally `.env` files via `-env-files`). The image is built from scratch with only the binary and CA certificates included.
+A Docker image is available. All configuration is done through environment variables (and optionally `.env` files via `-env-files`).
 
 ```yaml
 # docker-compose.yml example:
