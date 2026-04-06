@@ -256,6 +256,48 @@ You can load configuration from multiple `.env` files using the `-env-files` arg
 
 See [godotenv's precedence documentation](https://github.com/joho/godotenv?tab=readme-ov-file#precedence--conventions) for details on precedence behavior.
 
+## Installation
+
+### macOS via Homebrew
+
+```shell
+brew install cdzombak/oss/mqtt2influxdb
+```
+
+### Debian via apt repository
+
+[Install my Debian repository](https://www.dzombak.com/blog/2025/06/updated-instructions-for-installing-my-debian-package-repositories/) if you haven't already:
+
+```shell
+sudo mkdir -p /etc/apt/keyrings
+curl -fsSL https://dist.cdzombak.net/keys/dist-cdzombak-net.gpg -o /etc/apt/keyrings/dist-cdzombak-net.gpg
+sudo chmod 644 /etc/apt/keyrings/dist-cdzombak-net.gpg
+sudo mkdir -p /etc/apt/sources.list.d
+sudo curl -fsSL https://dist.cdzombak.net/cdzombak-oss.sources -o /etc/apt/sources.list.d/cdzombak-oss.sources
+sudo chmod 644 /etc/apt/sources.list.d/cdzombak-oss.sources
+sudo apt update
+```
+
+Then install `mqtt2influxdb` via `apt-get`:
+
+```shell
+sudo apt-get install mqtt2influxdb
+```
+
+### Manual installation from build artifacts
+
+Pre-built binaries for Linux and macOS on various architectures are downloadable from each [GitHub Release](https://github.com/cdzombak/mqtt2influxdb/releases). Debian packages for each release are available as well.
+
+### Build and install locally
+
+```shell
+git clone https://github.com/cdzombak/mqtt2influxdb.git
+cd mqtt2influxdb
+make build
+
+cp out/mqtt2influxdb $INSTALL_DIR
+```
+
 ## License
 
 This software is licensed under the LGPL-3.0 license. See [LICENSE](LICENSE) in this repo.
